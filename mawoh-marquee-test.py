@@ -27,7 +27,7 @@ import pygame.freetype as freetype
 
 ###
 
-colors = {
+COLORS = {
     "grey_light":  pygame.Color(200, 200, 200),
     "grey_dark" :  pygame.Color(100, 100, 100),
     "green"     :  pygame.Color(50, 255, 63),
@@ -41,16 +41,33 @@ colors = {
 
 class MarqueeText(object):
 
-    def __init__(self, marquee, text="mawoh marquee", fontsize=64,color='red'):
+    def __init__(self, text="mawoh marquee", color=COLORS['red']):
         """
         create an internal Font Surface
+        """
+        self.text = text
+        self.color = color
 
+    def set_marquee(self, marquee):
+        """
         marquee is of class MarqueeText
         """
         self.marquee = marquee
         self.screen = marquee.get_surface()
 
-    def put(self, x=0, y=0):
+        style = freetype.STYLE_OBLIQUE
+        font = marquee.get_font()
+        (textsurface, rect) = font.render(self.text, self.color, size=marquee.get_fontsize(), style=style)
+        # (paddingsurface, rect) = font.render(" +++ ", color, size=size, style=style)
+        self.surface = textsurface
+        self.rect = rect
+        log.info("text surface created: {}".format(textsurface))
+
+    def put_offscreen(self, delta_x, delta_y):
+        """
+        put the text surface just outside of the is_offscreen
+        delta_x, delta_y are used to determine the scrolling direction to place the text correctly
+        """
         pass
 
     def move(self, delta_x, delta_y):
@@ -69,17 +86,54 @@ class MarqueeText(object):
 
 
 class Marquee(object):
-    def __init__(self, width=800, height=400, X=0,Y=0, decorations=False, autosize=True, autoposition=True, maxfps=30, color='red', timeout=0, exit_on_keypress=True):
-        pass
+    
+    def __init__(self, width=800, height=400, X=0,Y=0, decorations=False, autosize=True, autoposition=True, maxfps=30, bgcolor=COLORS["black"], timeout=0, exit_on_keypress=True, fontfile=None, fontsize=64):
 
-    def initpygame(self):
-        pass
+        pygame.init()
+
+        # prepare font
+        self.fontsize = fontsize
+        if fontfile:
+            self.font = freetype.Font(fontfile)
+        else:
+            fontdir = os.path.dirname(os.path.abspath (__file__))
+            self.font = freetype.Font(os.path.join (fontdir, "data", "sans.ttf"))
+
+        # we need a clock to time fps
+        self.clock = pygame.time.Clock()
+
+        # prepare the screen
+        self.oursize = (width, height)
+        if autosize:
+            # TODO:
+            # if autosize, also scale the fontsize to match it!
+            # also we need padding around the window borders
+            modes = pygame.display.list_modes()
+            log.info("modes: {}".format(modes))
+            args.Y = modes[0][1] - height
+            oursize = (modes[0][0], height)
+
+        # moving the screen window to the desired position
+        log.info("creating screen with size {}".format(oursize))
+        os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (args.X,args.Y)
+
+        # now set the display decorations mode
+        if decorations:
+            self.display_options = pygame.NOFRAME
+        else:
+            self.display_options = None
 
     def run(self):
-        pass
+        screen = pygame.display.set_mode(self.oursize, self.display_options)
 
-    def add_text(self,marquetext,timeout=0,count=0):
-        pass
+    def add_text(self,marqueetext,timeout=0,count=0):
+        marqueetext.set_marquee(self)
+
+    def get_font(self):
+        return self.font
+
+    def get_fontsize(self):
+        return self.fontsize
 
     def get_surface(self):
         """
@@ -103,27 +157,12 @@ def cmd_line():
     return parser.parse_args()
 
 
+
+### main
+
+
 def run(args):
-    pygame.init()
-    clock = pygame.time.Clock()
-
-    fontdir = os.path.dirname(os.path.abspath (__file__))
-    font = freetype.Font(os.path.join (fontdir, "data", "sans.ttf"))
-
-    oursize =(args.width, args.height)
-    if args.autosize:
-        modes = pygame.display.list_modes()
-        log.info("modes: {}".format(modes))
-        args.Y = modes[0][1]-args.height
-        oursize = (modes[0][0],args.height)
-
-
-
-    log.info("creating screen with size {}".format(oursize))
-
-    os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (args.X,args.Y)
-    screen = pygame.display.set_mode(oursize, pygame.NOFRAME)
-
+    #....
     color=colors["black"]
     posx = screen.get_width()
     posy = 0
@@ -132,11 +171,7 @@ def run(args):
     scroll_speed = -5
     color = colors["red"]
     size = 64
-    style = freetype.STYLE_OBLIQUE
-    (textsurface, rect) = font.render(args.text, color, size=size, style=style)
-    (paddingsurface, rect) = font.render(" +++ ", color, size=size, style=style)
 
-    log.info("surface pformat: {}".format(textsurface))
 
     going = True
     while going:
@@ -178,6 +213,13 @@ def run(args):
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 log.info('starting up')
+
 args = cmd_line()
-run(args)
+
+marquee = Marquee()
+text1 = MarqueeText("hello world")
+text2 = MarqueeText("second marquee text", color=COLORS["green"])
+
+marquee.add_text(text1)
+
 log.info('done')

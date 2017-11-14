@@ -47,6 +47,7 @@ class MarqueeText(object):
         """
         self.text = text
         self.color = color
+        log.info("text created: ({}) {}".format(self.color,self.text))
 
     def set_marquee(self, marquee):
         """
@@ -61,7 +62,10 @@ class MarqueeText(object):
         # (paddingsurface, rect) = font.render(" +++ ", color, size=size, style=style)
         self.surface = textsurface
         self.rect = rect
-        log.info("text surface created: {}".format(textsurface))
+        log.debug("text surface created: {}".format(textsurface))
+
+    def get_text(self):
+        return self.text
 
     def put_offscreen(self, delta_x, delta_y):
         """
@@ -86,10 +90,19 @@ class MarqueeText(object):
 
 
 class Marquee(object):
-    
+
     def __init__(self, width=800, height=400, X=0,Y=0, decorations=False, autosize=True, autoposition=True, maxfps=30, bgcolor=COLORS["black"], timeout=0, exit_on_keypress=True, fontfile=None, fontsize=64):
 
+        # let the show begin
         pygame.init()
+
+        # should there be a declaration block?
+        # texts will be a list of MarqueeText instances
+        self.texts = []
+
+        # import parameters
+        self.exit_on_keypress = exit_on_keypress
+        self.bgcolor = bgcolor
 
         # prepare font
         self.fontsize = fontsize
@@ -101,33 +114,77 @@ class Marquee(object):
 
         # we need a clock to time fps
         self.clock = pygame.time.Clock()
-
+        self.maxfps = maxfps
+        #TODO: fix args and attributes!
         # prepare the screen
-        self.oursize = (width, height)
         if autosize:
             # TODO:
             # if autosize, also scale the fontsize to match it!
             # also we need padding around the window borders
+            log.info("autosize!")
             modes = pygame.display.list_modes()
             log.info("modes: {}".format(modes))
-            args.Y = modes[0][1] - height
+            Y = modes[0][1] - height
             oursize = (modes[0][0], height)
 
+        self.oursize = oursize
         # moving the screen window to the desired position
         log.info("creating screen with size {}".format(oursize))
-        os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (args.X,args.Y)
+        os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (X,Y)
 
         # now set the display decorations mode
         if decorations:
-            self.display_options = pygame.NOFRAME
+            self.display_options = 0
         else:
-            self.display_options = None
+            self.display_options = pygame.NOFRAME
 
     def run(self):
+        log.info("running!")
+        log.debug("size: {}".format(self.oursize))
+        log.debug("options: {}".format(self.display_options))
         screen = pygame.display.set_mode(self.oursize, self.display_options)
 
+        #enter the looooop
+        going = True
+        while going:
+            # bail out on any key
+            events = pygame.event.get()
+            for e in events:
+                if e.type in (QUIT, KEYDOWN):
+                    going = False
+                    log.info("sane exit condition. bye bye.")
+
+            # calculate marquee position
+            # posx += scroll_speed
+            # curx = posx
+            #
+            # screen.fill(0)
+            # screen.blit(textsurface,(posx,posy))
+            #
+            # # Now display as many of the texts as needed to fill the screen
+            # # width.
+            # # if pos+text width is completely outside of the screen reset posx to the x position of the next copy.
+            #
+            #
+            # # if posx+textsurface.get_width() < screen.get_width():
+            # #     curx += textsurface.get_width()
+            # #     screen.blit(textsurface,(curx,posy))
+            #
+            pygame.display.update()
+            self.clock.tick(self.maxfps)
+        pygame.quit()
+
+
     def add_text(self,marqueetext,timeout=0,count=0):
+
+        # link the marqueetext to us
         marqueetext.set_marquee(self)
+
+        # add the text to the list
+
+        self.texts.append(marqueetext)
+        log.info("added text {} '{}' to list.".format(len(self.texts), marqueetext.get_text()))
+
 
     def get_font(self):
         return self.font
@@ -153,57 +210,15 @@ def cmd_line():
     parser.add_argument('--X', default=0, type=int)
     parser.add_argument('--Y', default=0, type=int)
     parser.add_argument('--autosize', action="store_true")
+    parser.add_argument('-v', action="store_true")
 
-    return parser.parse_args()
+    args = parser.parse_args()
 
+    if args.v:
+        logging.basicConfig(level=logging.DEBUG)
+        log.debug("debug logging enabled")
 
-
-### main
-
-
-def run(args):
-    #....
-    color=colors["black"]
-    posx = screen.get_width()
-    posy = 0
-    dx = 0
-    max_fps = 30
-    scroll_speed = -5
-    color = colors["red"]
-    size = 64
-
-
-    going = True
-    while going:
-
-        # bail out on any key
-        events = pygame.event.get()
-        for e in events:
-            if e.type in (QUIT, KEYDOWN):
-                going = False
-                log.info("sane exit condition. bye bye.")
-
-        # calculate marquee position
-
-        posx += scroll_speed
-        curx = posx
-
-        screen.fill(0)
-        screen.blit(textsurface,(posx,posy))
-
-        # Now display as many of the texts as needed to fill the screen
-        # width.
-        # if pos+text width is completely outside of the screen reset posx to the x position of the next copy.
-
-
-        # if posx+textsurface.get_width() < screen.get_width():
-        #     curx += textsurface.get_width()
-        #     screen.blit(textsurface,(curx,posy))
-
-        pygame.display.update()
-        clock.tick(max_fps)
-
-    pygame.quit()
+    return args
 
 
 
@@ -216,10 +231,16 @@ log.info('starting up')
 
 args = cmd_line()
 
+# TODO:
+# transfer command line
+
 marquee = Marquee()
 text1 = MarqueeText("hello world")
 text2 = MarqueeText("second marquee text", color=COLORS["green"])
 
 marquee.add_text(text1)
+marquee.add_text(text2)
+
+marquee.run()
 
 log.info('done')

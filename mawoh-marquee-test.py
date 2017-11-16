@@ -165,6 +165,10 @@ class Marquee(object):
         log.debug("options: {}".format(self.display_options))
         screen = pygame.display.set_mode(self.oursize, self.display_options)
 
+        # the scrolling text follows the carrot. it begins just outside the is_offscreen
+
+        carrot = screen.get_width()
+
         #enter the looooop
         going = True
         count = 0
@@ -195,11 +199,11 @@ class Marquee(object):
 
             for text in self.texts:
                 count += 1
+
+                # display text if currently on screen
+
                 # if text would be outside screen, reattach to the end of list
                 log.info("({}) text: {}".format(count,text.get_text()))
-                if text.is_offscreen():
-                    pass
-
 
 
             pygame.display.update()

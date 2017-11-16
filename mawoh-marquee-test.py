@@ -184,7 +184,13 @@ class Marquee(object):
                 if e.type in (QUIT, KEYDOWN):
                     going = False
                     log.info("sane exit condition. bye bye.")
-            
+
+            if position <= -current_text.get_surface().get_width():
+                self.texts.append(current_text)
+                current_text = self.texts.pop(0)
+                position = screen.get_width()
+
+
             screen.fill(self.bgcolor)
             screen.blit(current_text.get_surface(),(position,0))
 
@@ -255,6 +261,7 @@ def cmd_line():
     parser.add_argument('--size', default=40, type=int)
     parser.add_argument('--width',default=800, type=int)
     parser.add_argument('--height',default=400, type=int)
+    parser.add_argument('--delta_x',default=-5, type=int)
     parser.add_argument('--color',default='red')
     parser.add_argument('--X', default=0, type=int)
     parser.add_argument('--Y', default=0, type=int)
@@ -285,7 +292,7 @@ if __name__ == "__main__":
 
     # TODO#:
     # transfer command line
-    marquee = Marquee(maxfps=60,delta_x=-3)
+    marquee = Marquee(maxfps=60,delta_x=args.delta_x)
     text1 = MarqueeText("hello world")
     text2 = MarqueeText("second marquee text", color=COLORS["green"])
 

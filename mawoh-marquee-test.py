@@ -91,7 +91,10 @@ class MarqueeText(object):
 
 class Marquee(object):
 
-    def __init__(self, width=800, height=400, X=0,Y=0, decorations=False, autosize=True, autoposition=True, maxfps=30, bgcolor=COLORS["black"], timeout=0, exit_on_keypress=True, fontfile=None, fontsize=64, delta_x=-5, delta_y=0):
+    def __init__(self, width=800, height=200, X=0,Y=0, decorations=False, autosize=True, autoposition=True, maxfps=30, bgcolor=COLORS["black"], timeout=0, exit_on_keypress=True, fontfile=None, fontsize=64, delta_x=-5, delta_y=0):
+        """
+        set up marquee. does not display window yet until run() is called.
+        """
 
         # let the show begin
         pygame.init()
@@ -133,7 +136,7 @@ class Marquee(object):
         # we need a clock to time fps
         self.clock = pygame.time.Clock()
         self.maxfps = maxfps
-        #TODO: fix args and attributes!
+
         # prepare the screen
         if autosize:
             # TODO:
@@ -162,10 +165,9 @@ class Marquee(object):
         log.debug("options: {}".format(self.display_options))
         screen = pygame.display.set_mode(self.oursize, self.display_options)
 
-
-
         #enter the looooop
         going = True
+        count = 0
         while going:
             # bail out on any key
             events = pygame.event.get()
@@ -190,6 +192,16 @@ class Marquee(object):
             # #     curx += textsurface.get_width()
             # #     screen.blit(textsurface,(curx,posy))
             #
+
+            for text in self.texts:
+                count += 1
+                # if text would be outside screen, reattach to the end of list
+                log.info("({}) text: {}".format(count,text.get_text()))
+                if text.is_offscreen():
+                    pass
+
+
+
             pygame.display.update()
             self.clock.tick(self.maxfps)
         pygame.quit()
@@ -217,18 +229,19 @@ class Marquee(object):
         return the marquee surface
         """
 
-
-###
-###
-###
+# define commandline
+#
 def cmd_line():
+    """
+    create commandline, return args
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument('--text', default=['mawoh marquee'], nargs='+')
     parser.add_argument('--font', default='')
     parser.add_argument('--size', default=40, type=int)
     parser.add_argument('--width',default=800, type=int)
     parser.add_argument('--height',default=400, type=int)
-    #parser.add_argument('--color',default='red')
+    parser.add_argument('--color',default='red')
     parser.add_argument('--X', default=0, type=int)
     parser.add_argument('--Y', default=0, type=int)
     parser.add_argument('--autosize', action="store_true")
@@ -243,26 +256,30 @@ def cmd_line():
     return args
 
 
+# logging!
+# TODO: evaluate the correct way to establish lib logging
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger("marquee")
 
-#
 # main
 #
-logging.basicConfig(level=logging.INFO)
-log = logging.getLogger(__name__)
-log.info('starting up')
+if __name__ == "__main__":
 
-args = cmd_line()
+    log.info('starting up')
 
-# TODO:
-# transfer command line
+    args = cmd_line()
 
-marquee = Marquee()
-text1 = MarqueeText("hello world")
-text2 = MarqueeText("second marquee text", color=COLORS["green"])
+    # TODO:
+    # transfer command line
+    marquee = Marquee()
+    text1 = MarqueeText("hello world")
+    text2 = MarqueeText("second marquee text", color=COLORS["green"])
 
-marquee.add_text(text1)
-marquee.add_text(text2)
+    # add some demo text
+    marquee.add_text(text1)
+    marquee.add_text(text2)
 
-marquee.run()
+    # start the loop
+    marquee.run()
 
-log.info('done')
+    log.info('done')

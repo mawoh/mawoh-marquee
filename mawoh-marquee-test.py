@@ -91,21 +91,39 @@ class MarqueeText(object):
 
 class Marquee(object):
 
-    def __init__(self, width=800, height=400, X=0,Y=0, decorations=False, autosize=True, autoposition=True, maxfps=30, bgcolor=COLORS["black"], timeout=0, exit_on_keypress=True, fontfile=None, fontsize=64):
+    def __init__(self, width=800, height=400, X=0,Y=0, decorations=False, autosize=True, autoposition=True, maxfps=30, bgcolor=COLORS["black"], timeout=0, exit_on_keypress=True, fontfile=None, fontsize=64, delta_x=-5, delta_y=0):
 
         # let the show begin
         pygame.init()
 
-        # should there be a declaration block?
+        #
+        # ## should there be a declaration block?
+        #
+
+        #
+        # Declarations:
+        #
+
         # texts will be a list of MarqueeText instances
         self.texts = []
 
-        # import parameters
+        # delta is the movement speed
+        self.delta_x=delta_x
+        self.delta_y=delta_y
+
+        # counter is the rolling position
+        self.counter_x=0
+        self.counter_y=0
+
         self.exit_on_keypress = exit_on_keypress
         self.bgcolor = bgcolor
+        self.fontsize = fontsize
+
+        #
+        # End of declarations
+        #
 
         # prepare font
-        self.fontsize = fontsize
         if fontfile:
             self.font = freetype.Font(fontfile)
         else:
@@ -121,15 +139,15 @@ class Marquee(object):
             # TODO:
             # if autosize, also scale the fontsize to match it!
             # also we need padding around the window borders
-            log.info("autosize!")
+            log.info("detect optimal size")
             modes = pygame.display.list_modes()
-            log.info("modes: {}".format(modes))
+            log.debug("modes: {}".format(modes))
             Y = modes[0][1] - height
             oursize = (modes[0][0], height)
 
         self.oursize = oursize
         # moving the screen window to the desired position
-        log.info("creating screen with size {}".format(oursize))
+        log.info("display size {}".format(oursize))
         os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (X,Y)
 
         # now set the display decorations mode
@@ -143,6 +161,8 @@ class Marquee(object):
         log.debug("size: {}".format(self.oursize))
         log.debug("options: {}".format(self.display_options))
         screen = pygame.display.set_mode(self.oursize, self.display_options)
+
+
 
         #enter the looooop
         going = True

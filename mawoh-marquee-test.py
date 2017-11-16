@@ -67,6 +67,9 @@ class MarqueeText(object):
     def get_text(self):
         return self.text
 
+    def get_surface(self):
+        return self.surface
+
     def put_offscreen(self, delta_x, delta_y):
         """
         put the text surface just outside of the is_offscreen
@@ -165,9 +168,11 @@ class Marquee(object):
         log.debug("options: {}".format(self.display_options))
         screen = pygame.display.set_mode(self.oursize, self.display_options)
 
+        current_text = self.texts.pop(0)
+
         # the scrolling text follows the carrot. it begins just outside the is_offscreen
 
-        carrot = screen.get_width()
+        position = screen.get_width()
 
         #enter the looooop
         going = True
@@ -179,6 +184,11 @@ class Marquee(object):
                 if e.type in (QUIT, KEYDOWN):
                     going = False
                     log.info("sane exit condition. bye bye.")
+            
+            screen.fill(self.bgcolor)
+            screen.blit(current_text.get_surface(),(position,0))
+
+            position += self.delta_x
 
             # calculate marquee position
             # posx += scroll_speed
@@ -197,16 +207,16 @@ class Marquee(object):
             # #     screen.blit(textsurface,(curx,posy))
             #
 
-            for text in self.texts:
-                count += 1
+            #for text in self.texts:
+            #    count += 1
 
-                # display text if currently on screen
+            #    # display text if currently on screen
 
-                # if text would be outside screen, reattach to the end of list
-                log.info("({}) text: {}".format(count,text.get_text()))
+            #    # if text would be outside screen, reattach to the end of list
+            #    log.info("({}) text: {}".format(count,text.get_text()))
 
 
-            pygame.display.update()
+            pygame.display.flip()
             self.clock.tick(self.maxfps)
         pygame.quit()
 
@@ -273,9 +283,9 @@ if __name__ == "__main__":
 
     args = cmd_line()
 
-    # TODO:
+    # TODO#:
     # transfer command line
-    marquee = Marquee()
+    marquee = Marquee(maxfps=60,delta_x=-3)
     text1 = MarqueeText("hello world")
     text2 = MarqueeText("second marquee text", color=COLORS["green"])
 

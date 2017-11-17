@@ -150,6 +150,8 @@ class Marquee(object):
             log.debug("modes: {}".format(modes))
             Y = modes[0][1] - height
             oursize = (modes[0][0], height)
+        else:
+            oursize = (width,height)
 
         self.oursize = oursize
         # moving the screen window to the desired position
@@ -222,8 +224,12 @@ class Marquee(object):
             #    log.info("({}) text: {}".format(count,text.get_text()))
 
 
-            pygame.display.flip()
+            pygame.display.update()
             self.clock.tick(self.maxfps)
+
+            if not position % 100:
+                log.info("fps: {}".format(self.clock.get_fps()))
+
         pygame.quit()
 
 
@@ -262,6 +268,7 @@ def cmd_line():
     parser.add_argument('--width',default=800, type=int)
     parser.add_argument('--height',default=400, type=int)
     parser.add_argument('--delta_x',default=-5, type=int)
+    parser.add_argument('--maxfps',default=60, type=int)
     parser.add_argument('--color',default='red')
     parser.add_argument('--X', default=0, type=int)
     parser.add_argument('--Y', default=0, type=int)
@@ -292,13 +299,17 @@ if __name__ == "__main__":
 
     # TODO#:
     # transfer command line
-    marquee = Marquee(maxfps=60,delta_x=args.delta_x)
-    text1 = MarqueeText("hello world")
-    text2 = MarqueeText("second marquee text", color=COLORS["green"])
+    marquee = Marquee(maxfps=args.maxfps,delta_x=args.delta_x,width=args.width,height=args.height, autosize=args.autosize,X=args.X,Y=args.Y,fontsize=args.size)
+    for t in  args.text:
+        mtext = MarqueeText(t)
+        marquee.add_text(mtext)
 
-    # add some demo text
-    marquee.add_text(text1)
-    marquee.add_text(text2)
+    #text1 = MarqueeText("hello world")
+    #text2 = MarqueeText("second marquee text", color=COLORS["green"])
+
+    ## add some demo text
+    #marquee.add_text(text1)
+    #marquee.add_text(text2)
 
     # start the loop
     marquee.run()

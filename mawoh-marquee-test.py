@@ -34,6 +34,7 @@ COLORS = {
     "red"       :  pygame.Color(220, 30, 30),
     "blue"      :  pygame.Color(50, 75, 245),
     "black"     :  pygame.Color(0, 0, 0),
+    "white"     :  pygame.Color(255, 255, 255),
 }
 
 
@@ -94,7 +95,7 @@ class MarqueeText(object):
 
 class Marquee(object):
 
-    def __init__(self, width=800, height=200, X=0,Y=0, decorations=False, autosize=True, autoposition=True, maxfps=30, bgcolor=COLORS["black"], timeout=0, exit_on_keypress=True, fontfile=None, fontsize=64, delta_x=-5, delta_y=0):
+    def __init__(self, width=800, height=200, X=0,Y=0, decorations=False, autosize=True, autoposition=True, maxfps=30, bgcolor=COLORS["black"], textcolor=COLORS["white"], timeout=0, exit_on_keypress=True, fontfile=None, fontsize=64, delta_x=-5, delta_y=0):
         """
         set up marquee. does not display window yet until run() is called.
         """
@@ -124,6 +125,7 @@ class Marquee(object):
         self.exit_on_keypress = exit_on_keypress
         self.bgcolor = bgcolor
         self.fontsize = fontsize
+        self.textcolor = textcolor
 
         #
         # End of declarations
@@ -170,7 +172,16 @@ class Marquee(object):
         log.debug("options: {}".format(self.display_options))
         screen = pygame.display.set_mode(self.oursize, self.display_options)
 
-        current_text = self.texts.pop(0)
+        alltext = '  +++  '
+        for o in self.texts:
+            alltext += o.get_text()
+            alltext += '  +++  '
+
+        style = freetype.STYLE_OBLIQUE
+        font = self.get_font()
+        (textsurface, rect) = font.render(alltext, self.textcolor, size=self.get_fontsize(), style=style)
+
+        current_text = textsurface
 
         # the scrolling text follows the carrot. it begins just outside the is_offscreen
 
@@ -187,14 +198,19 @@ class Marquee(object):
                     going = False
                     log.info("sane exit condition. bye bye.")
 
-            if position <= -current_text.get_surface().get_width():
-                self.texts.append(current_text)
-                current_text = self.texts.pop(0)
+            if position <= -current_text.get_width():
                 position = screen.get_width()
 
 
             screen.fill(self.bgcolor)
-            screen.blit(current_text.get_surface(),(position,0))
+
+            screenfull = False
+            posx = position
+            while not screenfull:
+                screen.blit(current_text,(posx,0))
+                if posx + current_text.get_width() >= screen.get_width():
+                    screenfull = True
+                posx += current_text.get_width()
 
             position += self.delta_x
 

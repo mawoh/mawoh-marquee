@@ -33,12 +33,13 @@ COLORS = {
 
 class MarqueeText(object):
 
-    def __init__(self, text="mawoh marquee", color=COLORS['red']):
+    def __init__(self, text="mawoh marquee", color=COLORS['red'],size=None):
         """
         create an internal Font Surface
         """
         self.text = text
         self.color = color
+        self.size = size
         log.debug("text created: ({}) {}".format(self.color,self.text))
 
     def set_marquee(self, marquee):
@@ -49,10 +50,11 @@ class MarqueeText(object):
 
         style = freetype.STYLE_OBLIQUE
         font = marquee.get_font()
-        (textsurface, rect) = font.render(self.text, self.color, size=marquee.get_fontsize(), style=style)
-        self.surface = textsurface
-        self.rect = rect
-        log.debug("text surface created: {}".format(textsurface))
+        if not self.size:
+            self.size = marquee.get_fontsize()
+        (surface, rect) = font.render(self.text, self.color, size=self.size, style=style)
+        self.surface = surface
+        log.debug("MarqueeText initialized ({}x{}): {}".format(surface.get_width(),surface.get_height(),self.text))
 
     def get_text(self):
         return self.text

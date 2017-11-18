@@ -300,8 +300,9 @@ class Marquee(object):
                 (debugtext, rect) = self.font.render("p:{} fps:{} t:{} dx:{}".format(self.carrot, round(self.clock.get_fps(),1), self.clock.get_time(),self.delta_x), self.textcolor, size=10)
 
 
-            #ms = self.clock.tick(self.maxfps)
-            ms = self.clock.tick_busy_loop(self.maxfps)
+            ms = self.clock.tick(self.maxfps)
+            # is busy loop smoother?
+            #ms = self.clock.tick_busy_loop(self.maxfps)
             self.delta_x = round(-(speed/1000)*ms)
             self.carrot += self.delta_x
 

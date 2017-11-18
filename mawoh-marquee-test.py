@@ -33,14 +33,14 @@ COLORS = {
 
 class MarqueeText(object):
 
-    def __init__(self, text="mawoh marquee", color=COLORS['red'],size=None):
+    def __init__(self, text="mawoh marquee", textcolor=COLORS['red'],size=None):
         """
         create an internal Font Surface
         """
         self.text = text
-        self.color = color
+        self.textcolor = textcolor
         self.size = size
-        log.debug("text created: ({}) {}".format(self.color,self.text))
+        log.debug("text created: ({}) {}".format(self.textcolor,self.text))
 
     def set_marquee(self, marquee):
         """
@@ -55,7 +55,11 @@ class MarqueeText(object):
             self.size = marquee.get_fontsize()
 
         #TODO: alpha does not work this way with bgcolor...?!
-        (surface, rect) = font.render(self.text, self.color, size=self.size, style=style, bgcolor=pygame.Color(0,0,0,255))
+        #(surface, rect) = font.render(self.text, pygame.Color(255,0,0,255), size=self.size, style=style, bgcolor=pygame.Color(0,0,0,255))
+
+        log.debug("textcolor: {}".format(self.textcolor))
+        (surface, rect) = font.render(self.text, self.textcolor, size=self.size, style=style)
+
 
         self.surface = surface
         log.debug("MarqueeText initialized ({}x{}): {}".format(surface.get_width(),surface.get_height(),self.text))
@@ -69,7 +73,7 @@ class MarqueeText(object):
 
 class Marquee(object):
 
-    def __init__(self, width=800, height=200, X=0,Y=0, decorations=False, autosize=True, autoposition=True, fps=30, bgcolor=COLORS["black"], textcolor=COLORS["white"], timeout=0, exit_on_keypress=True, fontfile=None, fontsize=64, speed=10):
+    def __init__(self, width=800, height=100, X=0,Y=0, decorations=False, autosize=True, autoposition=True, fps=60, bgcolor=COLORS["black"], textcolor=COLORS["white"], timeout=0, exit_on_keypress=True, fontfile=None, fontsize=64, speed=10, paddingtext="+++", paddingcolor=COLORS["white"]):
         """
         set up marquee. does not display window yet until run() is called.
         """
@@ -90,9 +94,11 @@ class Marquee(object):
         self.speed = speed
 
         self.exit_on_keypress = exit_on_keypress
-        self.bgcolor = COLORS.get(bgcolor,COLORS['black'])
+        self.bgcolor = bgcolor
         self.fontsize = fontsize
-        self.textcolor = COLORS.get(textcolor,COLORS['white'])
+        self.textcolor = textcolor
+        self.paddingtext = paddingtext
+        self.paddingcolor = paddingcolor
 
         # we need a clock to time fps
         self.clock = pygame.time.Clock()
@@ -140,7 +146,7 @@ class Marquee(object):
             self.texts=[]
             li = LoremIpsum()
             for l in li.get_sentences_list(args.lorem):
-                lt = MarqueeText(l)
+                lt = MarqueeText(l,textcolor=self.textcolor)
                 self.add_text(lt)
             return True
 
@@ -160,9 +166,9 @@ class Marquee(object):
         if args.v:
             color = pygame.Color(randint(0,255),randint(0,255),randint(0,255))
         else:
-            color = self.textcolor
+            color = self.paddingcolor
 
-        (paddingtext, rect) = self.font.render(" +++ ", color, size=self.fontsize)
+        (paddingtext, rect) = self.font.render(" {} ".format(self.paddingtext), self.paddingcolor, size=self.fontsize)
 
         # calculate needed surface size (width and height)
         # generates list of positions and text surfaces
@@ -353,13 +359,13 @@ def cmd_line():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--font', default=None, help="font file")
-    parser.add_argument('--size', default=128, type=int, help="Font size")
+    parser.add_argument('--size', default=50, type=int, help="Font size")
     parser.add_argument('--width',default=800, type=int, help="Window width")
-    parser.add_argument('--height',default=150, type=int, help="Window Height")
+    parser.add_argument('--height',default=100, type=int, help="Window Height")
     parser.add_argument('--speed',default=250, type=int, help="Pixels per second scrolling speed")
     parser.add_argument('--fps',default=60, type=int, help="Frames per second rate limit")
-    parser.add_argument('--color',default='red', choices=COLORS.keys(), help="Text Color")
-    parser.add_argument('--bgcolor',default='blue', choices=COLORS.keys(), help="Background Color")
+    parser.add_argument('--textcolor',default='green', choices=COLORS.keys(), help="Text Color")
+    parser.add_argument('--bgcolor',default='black', choices=COLORS.keys(), help="Background Color")
     parser.add_argument('--paddingcolor',default='red', choices=COLORS.keys(), help="Padding text Color")
     parser.add_argument('--paddingtext',default=' +++ ', choices=COLORS.keys(), help="Padding text")
     parser.add_argument('--X', default=0, type=int, help="Window X position")
@@ -402,9 +408,9 @@ if __name__ == "__main__":
 
     # TODO#:
     # transfer command line
-    marquee = Marquee(fps=args.fps,width=args.width,height=args.height, autosize=args.autosize,X=args.X,Y=args.Y,fontsize=args.size, textcolor=args.color, bgcolor=args.bgcolor, speed=args.speed)
+    marquee = Marquee(fps=args.fps,width=args.width,height=args.height, autosize=args.autosize,X=args.X,Y=args.Y,fontsize=args.size, textcolor=COLORS[args.textcolor], bgcolor=COLORS[args.bgcolor], speed=args.speed,paddingtext=args.paddingtext, paddingcolor=COLORS[args.paddingcolor])
     for t in  args.text:
-        mtext = MarqueeText(t)
+        mtext = MarqueeText(t,textcolor=COLORS[args.textcolor])
         marquee.add_text(mtext)
 
     # start the loop

@@ -292,10 +292,12 @@ class Marquee(object):
                 self.update_texts()
                 next_scroller = self.generate_scroller()
 
+
             screen.fill(self.bgcolor)
+
             # render some debugging stuff
-            (debugtext, rect) = self.font.render("p:{} fps:{} t:{} dx:{}".format(self.carrot, round(self.clock.get_fps(),1), self.clock.get_time(),self.delta_x),
-             self.textcolor, size=10)
+            if args.v:
+                (debugtext, rect) = self.font.render("p:{} fps:{} t:{} dx:{}".format(self.carrot, round(self.clock.get_fps(),1), self.clock.get_time(),self.delta_x), self.textcolor, size=10)
 
 
             #ms = self.clock.tick(self.maxfps)
@@ -313,7 +315,8 @@ class Marquee(object):
                     posx = self.carrot - next_scroller.get_width()
                 screen.blit(next_scroller,(posx,posy))
 
-            screen.blit(debugtext,(0,0))
+            if args.v:
+                screen.blit(debugtext,(0,0))
 
             pygame.display.flip()
 

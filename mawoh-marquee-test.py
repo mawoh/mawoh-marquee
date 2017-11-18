@@ -48,11 +48,15 @@ class MarqueeText(object):
         """
         self.marquee = marquee
 
-        style = freetype.STYLE_OBLIQUE
+        #style = freetype.STYLE_OBLIQUE
+        style = 0
         font = marquee.get_font()
         if not self.size:
             self.size = marquee.get_fontsize()
-        (surface, rect) = font.render(self.text, self.color, size=self.size, style=style)
+
+        #TODO: alpha does not work this way with bgcolor...?!
+        (surface, rect) = font.render(self.text, self.color, size=self.size, style=style, bgcolor=pygame.Color(0,0,0,255))
+
         self.surface = surface
         log.debug("MarqueeText initialized ({}x{}): {}".format(surface.get_width(),surface.get_height(),self.text))
 
@@ -65,7 +69,7 @@ class MarqueeText(object):
 
 class Marquee(object):
 
-    def __init__(self, width=800, height=200, X=0,Y=0, decorations=False, autosize=True, autoposition=True, maxfps=30, bgcolor=COLORS["black"], textcolor=COLORS["white"], timeout=0, exit_on_keypress=True, fontfile=None, fontsize=64, delta_x=-5, delta_y=0, speed=10):
+    def __init__(self, width=800, height=200, X=0,Y=0, decorations=False, autosize=True, autoposition=True, fps=30, bgcolor=COLORS["black"], textcolor=COLORS["white"], timeout=0, exit_on_keypress=True, fontfile=None, fontsize=64, speed=10):
         """
         set up marquee. does not display window yet until run() is called.
         """
@@ -79,21 +83,20 @@ class Marquee(object):
         # carrot is the current x position of the scroller
         self.carrot = 0
 
-        # delta is the movement speed
-        self.delta_x=delta_x # Obsolete
-        self.delta_y=delta_y # Obsolete
+        # delta_x will be calculated at runtime
+        self.delta_x=0
 
         # scroller speed in pixels per second
         self.speed = speed
 
         self.exit_on_keypress = exit_on_keypress
-        self.bgcolor = bgcolor
+        self.bgcolor = COLORS.get(bgcolor,COLORS['black'])
         self.fontsize = fontsize
-        self.textcolor = textcolor
+        self.textcolor = COLORS.get(textcolor,COLORS['white'])
 
         # we need a clock to time fps
         self.clock = pygame.time.Clock()
-        self.maxfps = maxfps
+        self.fps = fps
 
         # prepare the screen
         if autosize:
@@ -240,9 +243,7 @@ class Marquee(object):
         log.debug("display driver: {}".format(pygame.display.get_driver()))
         #log.debug("display features: {}".format(pygame.display.Info()))
 
-        # new: speed instead of delta_x :)
-        # move n pixes per second
-        speed = self.speed
+
 
         # the x position of the scroller follows the carrot :)
         self.carrot = None
@@ -250,6 +251,7 @@ class Marquee(object):
         next_scroller = None
         current_y = 0
         next_y = 0
+        speed = self.speed
 
         #enter the looooop
         going = True
@@ -302,9 +304,9 @@ class Marquee(object):
                 (debugtext, rect) = self.font.render("p:{} fps:{} t:{} dx:{}".format(self.carrot, round(self.clock.get_fps(),1), self.clock.get_time(),self.delta_x), self.textcolor, size=10)
 
 
-            ms = self.clock.tick(self.maxfps)
+            ms = self.clock.tick(self.fps)
             # is busy loop smoother?
-            #ms = self.clock.tick_busy_loop(self.maxfps)
+            #ms = self.clock.tick_busy_loop(self.fps)
             self.delta_x = round(-(speed/1000)*ms)
             self.carrot += self.delta_x
 
@@ -348,21 +350,24 @@ def cmd_line():
     """
     create commandline, return args
     """
+
     parser = argparse.ArgumentParser()
-    parser.add_argument('--font', default='')
-    parser.add_argument('--size', default=40, type=int)
-    parser.add_argument('--width',default=800, type=int)
-    parser.add_argument('--height',default=400, type=int)
-    parser.add_argument('--delta_x',default=-5, type=int)
-    parser.add_argument('--speed',default=10, type=int)
-    parser.add_argument('--maxfps',default=60, type=int)
-    parser.add_argument('--color',default='red')
-    parser.add_argument('--X', default=0, type=int)
-    parser.add_argument('--Y', default=0, type=int)
-    parser.add_argument('--autosize', action="store_true")
-    parser.add_argument('-v', action="store_true")
-    parser.add_argument('--lorem', type=int)
-    parser.add_argument('text', default=['mawoh marquee'], nargs='*')
+    parser.add_argument('--font', default=None, help="font file")
+    parser.add_argument('--size', default=128, type=int, help="Font size")
+    parser.add_argument('--width',default=800, type=int, help="Window width")
+    parser.add_argument('--height',default=150, type=int, help="Window Height")
+    parser.add_argument('--speed',default=250, type=int, help="Pixels per second scrolling speed")
+    parser.add_argument('--fps',default=60, type=int, help="Frames per second rate limit")
+    parser.add_argument('--color',default='red', choices=COLORS.keys(), help="Text Color")
+    parser.add_argument('--bgcolor',default='blue', choices=COLORS.keys(), help="Background Color")
+    parser.add_argument('--paddingcolor',default='red', choices=COLORS.keys(), help="Padding text Color")
+    parser.add_argument('--paddingtext',default=' +++ ', choices=COLORS.keys(), help="Padding text")
+    parser.add_argument('--X', default=0, type=int, help="Window X position")
+    parser.add_argument('--Y', default=0, type=int, help="Window Y position")
+    parser.add_argument('--autosize', action="store_true", help="Autosize window to screen width.")
+    parser.add_argument('-v', action="store_true", help="Show verbose output")
+    parser.add_argument('--lorem', type=int, help="(for debugging) generate lines of random text - overrides any other text input")
+    parser.add_argument('text', default=['mawoh marquee'], nargs='*', help="Lines of text to display")
 
     args = parser.parse_args()
 
@@ -397,7 +402,7 @@ if __name__ == "__main__":
 
     # TODO#:
     # transfer command line
-    marquee = Marquee(maxfps=args.maxfps,delta_x=args.delta_x,width=args.width,height=args.height, autosize=args.autosize,X=args.X,Y=args.Y,fontsize=args.size, speed=args.speed)
+    marquee = Marquee(fps=args.fps,width=args.width,height=args.height, autosize=args.autosize,X=args.X,Y=args.Y,fontsize=args.size, textcolor=args.color, bgcolor=args.bgcolor, speed=args.speed)
     for t in  args.text:
         mtext = MarqueeText(t)
         marquee.add_text(mtext)

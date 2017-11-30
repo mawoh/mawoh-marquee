@@ -8,6 +8,7 @@ import sys
 import logging
 import argparse
 import pygame
+import time
 from random import randint
 from pprint import pformat,pprint
 from pygame.locals import *
@@ -40,6 +41,8 @@ class MarqueeText(object):
         self.text = text
         self.textcolor = textcolor
         self.size = size
+        self.created = time.time()
+        self.count = 0
         log.debug("text created: ({}) {}".format(self.textcolor,self.text))
 
     def set_marquee(self, marquee):
@@ -64,6 +67,24 @@ class MarqueeText(object):
         self.surface = surface
         log.debug("MarqueeText initialized ({}x{}): {}".format(surface.get_width(),surface.get_height(),self.text))
 
+
+    def get_age(self):
+        """
+        Return age of text in seconds
+        """
+        return time.time()-self.created
+
+    def get_count(self):
+        """
+        Return how many times the text was on screen
+        """
+        return self.count
+
+    def inc_count(self):
+        self.count += 1
+        log.debug("text {} seen {} times, age {}".format(self,self.count, self.get_age()))
+        return self.count
+
     def get_text(self):
         return self.text
 
@@ -73,7 +94,7 @@ class MarqueeText(object):
 
 class Marquee(object):
 
-    def __init__(self, width=800, height=100, X=0,Y=0, decorations=False, autosize=True, autoposition=True, fps=60, bgcolor=COLORS["black"], textcolor=COLORS["white"], timeout=0, exit_on_keypress=True, fontfile=None, fontsize=64, speed=10, paddingtext="+++", paddingcolor=COLORS["white"]):
+    def __init__(self, width=800, height=100, X=0,Y=0, decorations=False, autosize=True, autoposition=True, fps=60, bgcolor=COLORS["black"], textcolor=COLORS["white"], timeout=0, exit_on_keypress=True, fontfile=None, fontsize=64, speed=10, paddingtext="+++", paddingcolor=COLORS["white"], maxcount=0, maxage=0):
         """
         set up marquee. does not display window yet until run() is called.
         """
@@ -83,6 +104,7 @@ class Marquee(object):
 
         # texts will be a list of MarqueeText instances
         self.texts = []
+        self.index = 0
 
         # carrot is the current x position of the scroller
         self.carrot = 0
@@ -99,6 +121,10 @@ class Marquee(object):
         self.textcolor = textcolor
         self.paddingtext = paddingtext
         self.paddingcolor = paddingcolor
+
+        # expiry for text
+        self.maxage = maxage
+        self.maxcount = maxcount
 
         # we need a clock to time fps
         self.clock = pygame.time.Clock()
@@ -151,6 +177,9 @@ class Marquee(object):
         - File Mode, monitor a directory for one or more files with lines of text
 
         """
+
+        #log.debug("updating texts")
+
         if args.lorem:
             self.texts=[]
             li = LoremIpsum()
@@ -159,17 +188,67 @@ class Marquee(object):
                 self.add_text(lt)
             return True
 
+        # check if count or age is too high.
+        # if so, remove the text from the list
+        newtexts = []
+        for t in self.texts:
+            if not t:
+                newtexts.append(t)
+                continue
+
+            if self.maxage > 0:
+                if t.get_age() < self.maxage:
+                    newtexts.append(t)
+                    continue
+                else:
+                    log.debug("text expired by age t[{}]: {}".format(t.get_age(),t.get_text()))
+                    newtexts.append(None)
+
+            if self.maxcount:
+                if t.get_count() < self.count:
+                    newtexts.append(t)
+                    continue
+                else:
+                    log.debug("text expired by count t[{}]: {}".format(t.get_count(),t.get_text()))
+                    newtexts.append(None)
+
+        self.texts = newtexts
+
         return False
 
+    def defragment(self):
+        """
+        remove "None" elements from texts list
+        should only be used when index = 0
+        """
+        newtexts = []
+        for t in self.texts:
+            if t:
+                newtexts.append(t)
+        self.texts = newtexts
 
+    def has_text(self):
+        """
+        returns true if there is text available in the queue
+        """
+        for t in self.texts:
+            if t:
+                return True
+
+        # reset list - remove "None" items
+        self.texts=[]
+        return False
 
     def generate_scroller(self):
         """
-        - create a scroller surface, containing all available text surfaces.
+        - create a scroller surface, from available text surfaces.
         - iterate until at least screen is filled
         """
 
         # TODO: add cmdline args for padding
+
+        if not self.has_text():
+            return False
 
         # while debugging make the padding text colorful :)
         if args.v:
@@ -183,15 +262,36 @@ class Marquee(object):
         # generates list of positions and text surfaces
         width = 0
         height = paddingtext.get_height()
-        index = 0
+
+        # get current index in list of texts. reset if out of bounds
+        # and defragment list
+        if self.index > len(self.texts):
+            self.index = 0
+
+        log.debug("generating scroller starting at index {}".format(self.index))
+
         scroller = None
         filled = False
-        allseen = False
         blitlist = []
         log.debug("texts: {}".format(len(self.texts)))
         while not filled:
-            #log.debug("adding text {} to scroller".format(index))
-            text = self.texts[index].get_surface()
+
+            if not self.texts or not self.has_text():
+                #log.debug("there is no text in the queue...")
+                return False
+
+            #log.debug("adding text {} to scroller".format(self.index))
+            text = self.texts[self.index].get_surface()
+
+            if text:
+                self.texts[self.index].inc_count()
+
+            self.index += 1
+            if self.index >= len(self.texts):
+                self.index = 0
+                self.defragment()
+
+
 
             blitlist.append((width,paddingtext))
             width += paddingtext.get_width()
@@ -201,13 +301,10 @@ class Marquee(object):
             if text.get_height() > height:
                 height = text.get_height()
 
-            if allseen and width >= self.screen.get_width():
+            if width >= self.screen.get_width():
                 filled = True
 
-            index += 1
-            if index >= len(self.texts):
-                allseen = True
-                index = 0
+
 
         log.debug("adding scroller with size: {}x{}".format(width,height))
         scroller = pygame.Surface((width,height))
@@ -219,9 +316,10 @@ class Marquee(object):
         return scroller
 
     def scroller_outside(self, scroller):
-
+        if not scroller:
+            return False
         if self.speed > 0 and abs(self.carrot) >= scroller.get_width():
-            log.debug("scroller outside! <---")
+            log.debug("scroller outside! --->")
             return True
         elif self.speed < 0 and self.carrot >= self.screen.get_width():
             log.debug("scroller outside! <---")
@@ -230,6 +328,8 @@ class Marquee(object):
             return False
 
     def scroller_leaving(self, scroller):
+        if not scroller:
+            return False
         margin = 50
         width = self.screen.get_width()
         posx1 = self.carrot
@@ -280,6 +380,8 @@ class Marquee(object):
                     log.debug("sane exit condition. bye bye.")
                     going = False
 
+            screen.fill(self.bgcolor)
+
             # TODO: audit these conditionals!
             if not current_scroller:
                 # this is the first tick!
@@ -311,12 +413,9 @@ class Marquee(object):
                 self.update_texts()
                 next_scroller = self.generate_scroller()
 
-
-            screen.fill(self.bgcolor)
-
             # render some debugging stuff
             if args.v:
-                (debugtext, rect) = self.font.render("p:{} fps:{} t:{} dx:{}".format(self.carrot, round(self.clock.get_fps(),1), self.clock.get_time(),self.delta_x), self.textcolor, size=10)
+                (debugtext, rect) = self.font.render("p:{} fps:{} t:{} dx:{} i:{} #:{}".format(self.carrot, round(self.clock.get_fps(),1), self.clock.get_time(),self.delta_x,self.index,len(self.texts)), self.textcolor, size=10)
 
 
             ms = self.clock.tick(self.fps)
@@ -325,8 +424,9 @@ class Marquee(object):
             self.delta_x = round(-(speed/1000)*ms)
             self.carrot += self.delta_x
 
-            posy = int((screen.get_height()/2) - (current_scroller.get_height()/2))
-            screen.blit(current_scroller,(self.carrot,posy))
+            if current_scroller:
+                posy = int((screen.get_height()/2) - (current_scroller.get_height()/2))
+                screen.blit(current_scroller,(self.carrot,posy))
             if next_scroller:
                 posy = int((screen.get_height()/2) - (next_scroller.get_height()/2))
                 if speed >= 0:
@@ -379,6 +479,8 @@ def cmd_line():
     parser.add_argument('--paddingtext',default=' +++ ', choices=COLORS.keys(), help="Padding text")
     parser.add_argument('--X', default=0, type=int, help="Window X position")
     parser.add_argument('--Y', default=0, type=int, help="Window Y position")
+    parser.add_argument('--maxage', default=0, type=int, help="Maximum age of a text (seconds, 0 means forever)")
+    parser.add_argument('--maxcount', default=0, type=int, help="Maximum number of times a text is displayed (0 means forever)")
     parser.add_argument('--autosize', action="store_true", help="Autosize window to screen width.")
     parser.add_argument('-v', action="store_true", help="Show verbose output")
     parser.add_argument('--lorem', type=int, help="(for debugging) generate lines of random text - overrides any other text input")
@@ -417,7 +519,7 @@ if __name__ == "__main__":
 
     # TODO#:
     # transfer command line
-    marquee = Marquee(fps=args.fps,width=args.width,height=args.height, autosize=args.autosize,X=args.X,Y=args.Y,fontsize=args.size, textcolor=COLORS[args.textcolor], bgcolor=COLORS[args.bgcolor], speed=args.speed,paddingtext=args.paddingtext, paddingcolor=COLORS[args.paddingcolor])
+    marquee = Marquee(fps=args.fps,width=args.width,height=args.height, autosize=args.autosize,X=args.X,Y=args.Y,fontsize=args.size, textcolor=COLORS[args.textcolor], bgcolor=COLORS[args.bgcolor], speed=args.speed,paddingtext=args.paddingtext, paddingcolor=COLORS[args.paddingcolor], maxcount=args.maxcount, maxage=args.maxage)
     for t in  args.text:
         mtext = MarqueeText(t,textcolor=COLORS[args.textcolor])
         marquee.add_text(mtext)

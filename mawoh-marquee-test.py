@@ -107,7 +107,8 @@ class Marquee(object):
         # prepare the screen
         if autosize:
             # TODO:
-            # if autosize, also scale the fontsize to match it!
+            # if autosize, also scale the fontsize to match
+            # ...or scale window to font size?
             # also we need padding around the window borders
             log.debug("detect optimal size")
             modes = pygame.display.list_modes()
@@ -139,9 +140,17 @@ class Marquee(object):
         ## does not work :( opengl does not work for this and hwsurface
         ## is not available in window mode. bummer.
         #
-        #self.display_options = self.display_options|pygame.DOUBLEBUF
+        #self.display_options = self.display_options|pygame.DOUBLEBUF|pygame.OPENGL
 
     def update_texts(self):
+        """
+        - In LoremIpsum mode, generates new texts.
+
+        Other Ideas:
+        - Server mode, check for new texts from tcp socket
+        - File Mode, monitor a directory for one or more files with lines of text
+
+        """
         if args.lorem:
             self.texts=[]
             li = LoremIpsum()

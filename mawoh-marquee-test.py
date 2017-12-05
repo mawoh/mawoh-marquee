@@ -190,6 +190,7 @@ class Marquee(object):
 
         # check if count or age is too high.
         # if so, remove the text from the list
+        log.debug("checking for updates. {} texts in queue".format(self.texts))
         newtexts = []
         for t in self.texts:
             if not t:
@@ -197,24 +198,22 @@ class Marquee(object):
                 continue
 
             if self.maxage > 0:
-                if t.get_age() < self.maxage:
-                    newtexts.append(t)
-                    continue
-                else:
+                if t.get_age() > self.maxage:
                     log.debug("text expired by age t[{}]: {}".format(t.get_age(),t.get_text()))
                     newtexts.append(None)
+                    continue
 
             if self.maxcount:
-                if t.get_count() < self.count:
-                    newtexts.append(t)
-                    continue
-                else:
+                if t.get_count() > self.maxcount:
                     log.debug("text expired by count t[{}]: {}".format(t.get_count(),t.get_text()))
                     newtexts.append(None)
+                    continue
+
+            newtexts.append(t)
 
         self.texts = newtexts
-
-        return False
+        log.debug("update done: {} texts in queue".format(self.texts))
+        return True
 
     def defragment(self):
         """
@@ -248,6 +247,7 @@ class Marquee(object):
         # TODO: add cmdline args for padding
 
         if not self.has_text():
+            log.debug("have no text :( so sad.")
             return False
 
         # while debugging make the padding text colorful :)
@@ -385,6 +385,7 @@ class Marquee(object):
             # TODO: audit these conditionals!
             if not current_scroller:
                 # this is the first tick!
+                log.debug("new scroller!")
                 self.update_texts()
                 current_scroller = self.generate_scroller()
                 if speed >= 0: # <-----
